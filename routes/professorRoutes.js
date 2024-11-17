@@ -3,6 +3,7 @@ const jwt=require('jsonwebtoken');
 const bcrypt=require('bcrypt');
 const Professor=require('../models/professorModel');
 const protectRoute = require('../middlewares/protectRoute');
+const cloudinary=require('cloudinary');
 
 const router=express.Router();
 
@@ -92,17 +93,69 @@ router.post('/login', async(req, res) => {
 });
 
 router.patch('/update', protectRoute(['professor']), async(req, res) => {
-  const {userId, updates}=req.body;
+  const {userId, profilePic, ...updates}=req.body;
 
   try{
-    console.log(req.body);
-    // const professor=await Professor.findByIdAndUpdate(userId, {$set: updates}, {new: true, runValidators: true}).select('-password');
-    
-    // if(!professor){
-    //   return res.status(404).json({error: 'User not found'});
-    // }
+    if(profilePic){
+      const uploadResponse=await cloudinary.uploader.upload(profilePic, {
+        folder: 'professors',
+        public_id: userId,
+        overwrite: true
+      });
 
-    // res.status(200).json({success: 'User updated successfully', professor});
+      updates.profilePic=uploadResponse.secure_url;
+    }
+
+    const user=await Professor.findByIdAndUpdate(userId, {$set: updates}, {new: true, runValidators: true}).select('-password');
+    
+    if(!user){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    res.status(200).json({success: 'User updated successfully', user});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.post('/publication/add', protectRoute(['professor']), async(req, res) => {
+  const {userId, title, abstract, keywords, downloadLink, year}=req.body;
+
+  console.log(userId);
+  try{
+    const professor=await Professor.findById(userId);
+
+    if(!professor){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    const newPublication={title, abstract, keywords, downloadLink, year};
+
+    professor.publications.push(newPublication);
+
+    await professor.save();
+
+    res.status(200).json({success: 'Publication added successfully', publications: professor.publications});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.post('/publication', async(req, res) => {
+  const {userId}=req.body;
+
+  try{
+    const professor=await Professor.findById(userId);
+
+    if(!professor){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    res.status(200).json({publications: professor.publications});
   }
   catch(err){
     console.log(err);
