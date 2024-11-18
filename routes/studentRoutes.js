@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const Student=require('../models/studentModel');
+const Professor=require('../models/professorModel');
 const protectRoute = require('../middlewares/protectRoute');
 
 const router = express.Router();
@@ -75,6 +76,43 @@ router.post('/login', async(req, res) => {
     delete student.password;
     const studentWithRole={...student.toObject(), role: 'student'};
     res.cookie('token', token, {httpOnly: true, sameSite: 'none', secure: true}).status(200).json({success: 'Logged in successfully', user: studentWithRole});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.patch('/update', protectRoute(['student']), async(req, res) => {
+  const {wishlist, userId}=req.body;
+  
+  try{
+    const student=await Student.findByIdAndUpdate({_id: userId}, {professors: wishlist}, {new: true});
+
+    if(!student){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    res.status(200).json({success: 'Wishlist updated successfully'});
+  } 
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.get('/wishlist', protectRoute(['student']), async(req, res) => {
+  const userId=req._id;
+  try{
+    const student=await Student.findById(userId);
+
+    if(!student){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    // find professors in the wishlist
+    const professors=await Professor.find({_id: {$in: student.professors}}).select('-password').sort({name: 1});
+    res.status(200).json({wishlist: professors});
   }
   catch(err){
     console.log(err);

@@ -9,7 +9,7 @@ const studentSchema=new mongoose.Schema({
   },
   roll: {type:String, unique: true, required:true},
   department: {type:String, required:true, enum: ['CSE', 'ECE', 'ME', 'CCE', 'MME']},
-  professors: [{type: mongoose.Schema.Types.ObjectId, ref: 'Professor'}],
+  professors: [{type: mongoose.Schema.Types.ObjectId, ref: 'Professor', default: []}],
 });
 
 const Student=mongoose.model('Student', studentSchema);

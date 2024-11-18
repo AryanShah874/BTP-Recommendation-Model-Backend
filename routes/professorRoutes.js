@@ -163,6 +163,7 @@ router.post('/publication', async(req, res) => {
   }
 });
 
+
 router.get('/all', async(req, res) => {
   try{
     const professors=await Professor.find({}).select('-password').sort({name: 1});
@@ -178,5 +179,24 @@ router.get('/all', async(req, res) => {
     res.status(500).json({error: 'Internal server error'});
   }
 });
+
+router.get('/:id', async(req, res)=>{
+  // const {_id}=req;
+  const id=req.params.id;
+
+  try{
+    const professor=await Professor.findOne({_id: id}).select('-password');
+
+    if(!professor){
+      return res.status(404).json({error: 'Professor not found'});
+    }
+
+    res.status(200).json({professor});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+})
 
 module.exports=router;
