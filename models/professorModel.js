@@ -12,7 +12,7 @@ const professorSchema=new mongoose.Schema({
   department: {type:String, required:true, enum: ['CSE', 'ECE', 'CCE', 'MME']},
   researchAreas: {type:String, default: ''},
   researchTechnologies: {type: String, default: ''},
-  publications: [{title: {type: String}, abstract: {type: String}, downloadLink: {type: String} , keywords: [{type:String}], year: {type:Number}}],
+  publications: [{title: {type: String}, abstract: {type: String}, downloadLink: {type: String} , keywords: {type:String}, year: {type:Number}}],
 });
 
 const Professor=mongoose.model('Professor', professorSchema);
