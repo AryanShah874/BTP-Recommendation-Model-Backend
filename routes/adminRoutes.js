@@ -74,7 +74,7 @@ router.post('/login', async(req, res) => {
     delete admin.password;
     const adminWithRole={...admin.toObject(), role: 'admin'};
     
-    res.cookie("token", token, {httpOnly: true, sameSite: 'strict', maxAge: 24*60*60*1000}).status(200).json({success: 'User logged in successfully', user: adminWithRole});
+    res.cookie("token", token, {secure: true, sameSite: 'none', maxAge: 24*60*60*1000}).status(200).json({success: 'User logged in successfully', user: adminWithRole});
   }
   catch(err){
     console.log(err);
