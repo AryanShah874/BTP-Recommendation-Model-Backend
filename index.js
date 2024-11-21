@@ -17,7 +17,7 @@ connectDB();
 const app = express();
 
 app.use(express.json());
-app.use(cors({Credentials: true, origin: 'https://lnmiit-btp-recommendation.vercel.app/', methods: 'GET, POST, PUT, DELETE'}));
+app.use(cors({Credentials: true, origin: 'https://lnmiit-btp-recommendation.vercel.app', methods: 'GET, POST, PUT, DELETE'}));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // app.use(express.static('public'));
