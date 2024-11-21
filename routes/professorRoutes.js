@@ -8,6 +8,7 @@ const cloudinary=require('cloudinary');
 
 const router=express.Router();
 
+// Register a new professor
 router.post('/register', protectRoute(['admin']), async(req, res) => {
   try{
     const {email, password, designation, name, profilePic, department, researchAreas, researchTechnologies, publications}=req.body;
@@ -57,6 +58,7 @@ router.post('/register', protectRoute(['admin']), async(req, res) => {
   }
 });
 
+// Login a professor
 router.post('/login', async(req, res) => {
   try{
     const {email, password}=req.body;
@@ -86,6 +88,7 @@ router.post('/login', async(req, res) => {
     delete professor.password;
     const professorWithRole={...professor.toObject(), role: 'professor'};
     res.cookie('token', token, {secure: true, sameSite: 'none', path: '/', domain: '.btp-recommendation-model-backend.vercel.app' ,maxAge: 24*60*60*1000}).status(200).json({success: 'Logged in successfully', user: professorWithRole});
+    // res.cookie('token', token, {secure: true, sameSite: 'none', path: '/', maxAge: 24*60*60*1000}).status(200).json({success: 'Logged in successfully', user: professorWithRole});
   }
   catch(err){
     console.log(err);
@@ -93,6 +96,7 @@ router.post('/login', async(req, res) => {
   }
 });
 
+// update a professor from dashboard
 router.patch('/update', protectRoute(['professor']), async(req, res) => {
   const {profilePic, ...updates}=req.body;
   const userId=req._id;
@@ -122,6 +126,139 @@ router.patch('/update', protectRoute(['professor']), async(req, res) => {
   }
 });
 
+
+// display all publications of a professor in addPublication
+router.get('/publications', protectRoute(['professor']), async(req, res) => {
+  const userId=req._id;
+
+  try{
+    const professor=await Professor.findById(userId);
+
+    if(!professor){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    res.status(200).json({publications: professor.publications});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+// add a publication to a professor
+router.post('/publication/add', protectRoute(['professor']), async(req, res) => {
+  const {title, abstract, keywords, downloadLink, year}=req.body;
+  const userId=req._id;
+  
+  try{
+    const professor=await Professor.findById(userId);
+
+    if(!professor){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    const newPublication={title, abstract, keywords, downloadLink, year};
+
+    professor.updateOne({$push: {publications: newPublication}});
+
+    res.status(200).json({success: 'Publication added successfully', publications: professor.publications});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+// updating a publication of a professor
+router.put('/publication/update/:id', protectRoute(['professor']), async(req, res) => {
+  const {id}=req.params;
+  const userId=req._id;
+  const updates=req.body;
+
+  try{
+    const professor=await Professor.findById(userId);
+
+    if(!professor){
+      return res.status(404).json({error: 'User not found'}); 
+    }
+
+    const publication=professor.publications.id(id);
+
+    if(!publication){
+      return res.status(404).json({error: 'Publication not found'});  
+    }
+
+    publication.set(updates);
+
+    await professor.save();
+
+    res.status(200).json({success: 'Publication updated successfully', publication});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+
+// deleting a publication of a professor
+router.delete('/publication/delete/:id', protectRoute(['professor']), async(req, res) => {
+  const {id}=req.params;
+  const userId=req._id;
+
+  try{
+    const professor=await Professor.findById(userId);
+
+    if(!professor){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    const publication=professor.publications.id(id);
+
+    if(!publication){
+      return res.status(404).json({error: 'Publication not found'});
+    }
+
+    publication.remove();
+
+    await professor.save();
+
+    res.status(200).json({success: 'Publication deleted successfully', publications: professor.publications});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+// getting a particular publication of a professor
+router.get('/publication/:id', protectRoute(['professor']), async(req, res) => {
+  const {id}=req.params;
+  const userId=req._id;
+
+  try{
+    const professor=await Professor.findById(userId);
+
+    if(!professor){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    const publication=professor.publications.id(id); 
+
+    if(!publication){
+      return res.status(404).json({error: 'Publication not found'});
+    }
+
+    res.status(200).json({publication});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+// updating the professor's account
 router.put('/update/:id', protectRoute(['admin']), async(req, res) => {
 
   const {id}=req.params;
@@ -149,6 +286,7 @@ router.put('/update/:id', protectRoute(['admin']), async(req, res) => {
   }
 })
 
+// delete a professor
 router.delete('/delete/:id', protectRoute(['admin']), async(req, res) => {
   const {id}=req.params;
 
@@ -172,50 +310,7 @@ router.delete('/delete/:id', protectRoute(['admin']), async(req, res) => {
   }
 });
 
-router.post('/publication/add', protectRoute(['professor']), async(req, res) => {
-  const {userId, title, abstract, keywords, downloadLink, year}=req.body;
-
-  console.log(userId);
-  try{
-    const professor=await Professor.findById(userId);
-
-    if(!professor){
-      return res.status(404).json({error: 'User not found'});
-    }
-
-    const newPublication={title, abstract, keywords, downloadLink, year};
-
-    professor.publications.push(newPublication);
-
-    await professor.save();
-
-    res.status(200).json({success: 'Publication added successfully', publications: professor.publications});
-  }
-  catch(err){
-    console.log(err);
-    res.status(500).json({error: 'Internal server error'});
-  }
-});
-
-router.get('/publication', protectRoute(['professor']), async(req, res) => {
-  const userId=req._id;
-
-  try{
-    const professor=await Professor.findById(userId);
-
-    if(!professor){
-      return res.status(404).json({error: 'User not found'});
-    }
-
-    res.status(200).json({publications: professor.publications});
-  }
-  catch(err){
-    console.log(err);
-    res.status(500).json({error: 'Internal server error'});
-  }
-});
-
-
+// get all professors
 router.get('/all', async(req, res) => {
   try{
     const professors=await Professor.find({}).select('-password').sort({name: 1});
@@ -232,6 +327,7 @@ router.get('/all', async(req, res) => {
   }
 });
 
+// get a particular professor
 router.get('/:id', async(req, res)=>{
   // const {_id}=req;
   const id=req.params.id;
