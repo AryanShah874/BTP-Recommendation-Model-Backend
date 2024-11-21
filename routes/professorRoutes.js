@@ -2,6 +2,7 @@ const express=require('express');
 const jwt=require('jsonwebtoken');
 const bcrypt=require('bcrypt');
 const Professor=require('../models/professorModel');
+const Student=require('../models/studentModel');
 const protectRoute = require('../middlewares/protectRoute');
 const cloudinary=require('cloudinary');
 
@@ -93,8 +94,9 @@ router.post('/login', async(req, res) => {
 });
 
 router.patch('/update', protectRoute(['professor']), async(req, res) => {
-  const {userId, profilePic, ...updates}=req.body;
-
+  const {profilePic, ...updates}=req.body;
+  const userId=req._id;
+  
   try{
     if(profilePic){
       const uploadResponse=await cloudinary.uploader.upload(profilePic, {
@@ -113,6 +115,56 @@ router.patch('/update', protectRoute(['professor']), async(req, res) => {
     }
 
     res.status(200).json({success: 'User updated successfully', user});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.put('/update/:id', protectRoute(['admin']), async(req, res) => {
+
+  const {id}=req.params;
+  const {password, ...updates}=req.body;
+
+  try{
+    if(password){
+      const salt=await bcrypt.genSalt(10);
+      const hash=await bcrypt.hash(password, salt);
+
+      updates.password=hash;
+    }
+
+    const user=await Professor.findByIdAndUpdate(id, {$set: updates}, {new: true, runValidators: true}).select('-password');
+
+    if(!user){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    res.status(200).json({success: 'User updated successfully', user});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+})
+
+router.delete('/delete/:id', protectRoute(['admin']), async(req, res) => {
+  const {id}=req.params;
+
+  try{
+    // also remove from wishlist of students
+    await Student.updateMany({professors: id}, {$pull: {professors: id}});
+
+    const user=await Professor.findByIdAndDelete(id).select('-password');
+
+    if(!user){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    const professors=await Professor.find({}).select('-password').sort({name: 1});
+
+    res.status(200).json({success: 'User deleted successfully', professors});
   }
   catch(err){
     console.log(err);
@@ -145,8 +197,8 @@ router.post('/publication/add', protectRoute(['professor']), async(req, res) => 
   }
 });
 
-router.post('/publication', async(req, res) => {
-  const {userId}=req.body;
+router.get('/publication', protectRoute(['professor']), async(req, res) => {
+  const userId=req._id;
 
   try{
     const professor=await Professor.findById(userId);

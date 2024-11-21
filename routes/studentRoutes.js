@@ -120,6 +120,7 @@ router.get('/wishlist', protectRoute(['student']), async(req, res) => {
   }
 });
 
+//should be before :id as CastError: Cast to ObjectId failed for value "all" (type string) at path "_id" 
 router.get('/all', protectRoute(['admin']), async(req, res) => {
   try{
     const students=await Student.find({}).select('-password').sort({name: 1});
@@ -129,6 +130,69 @@ router.get('/all', protectRoute(['admin']), async(req, res) => {
     }
 
     res.status(200).json({students});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.put('/update/:id', protectRoute(['admin']), async(req, res) => {
+  const {id}=req.params;
+  const {password, ...updates}=req.body;
+
+  try{
+    if(password){
+      const salt=await bcrypt.genSalt(10);
+      const hash=await bcrypt.hash(password, salt);
+
+      updates.password=hash;
+    }
+
+    const student=await Student.findByIdAndUpdate(id, {$set: updates}, {new: true, runValidators: true}).select('-password');
+
+    if(!student){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    res.status(200).json({success: 'User updated successfully', student});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.delete('/delete/:id', protectRoute(['admin']), async(req, res) => {
+  const {id}=req.params;
+
+  try{
+    const student=await Student.findByIdAndDelete(id).select('-password');
+
+    if(!student){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    const students=await Student.find({}).select('-password').sort({name: 1});
+
+    res.status(200).json({success: 'User deleted successfully', students});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
+});
+
+router.get('/:id', protectRoute(['admin']), async(req, res) => {
+  const id=req.params.id;
+  try{
+    const student=await Student.findById(id).select('-password');
+
+    if(!student){
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    res.status(200).json({student});
   }
   catch(err){
     console.log(err);
