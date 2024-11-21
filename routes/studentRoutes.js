@@ -75,7 +75,7 @@ router.post('/login', async(req, res) => {
 
     delete student.password;
     const studentWithRole={...student.toObject(), role: 'student'};
-    res.cookie('token', token, {httpOnly: true, sameSite: 'none', secure: true}).status(200).json({success: 'Logged in successfully', user: studentWithRole});
+    res.cookie('token', token, {secure: true, sameSite: 'none', path: '/', domain: '.btp-recommendation-model-backend.vercel.app' ,maxAge: 24*60*60*1000}).status(200).json({success: 'Logged in successfully', user: studentWithRole});
   }
   catch(err){
     console.log(err);
