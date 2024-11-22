@@ -160,9 +160,9 @@ router.post('/publication/add', protectRoute(['professor']), async(req, res) => 
 
     const newPublication={title, abstract, keywords, downloadLink, year};
 
-    professor.updateOne({$push: {publications: newPublication}});
+    const updatedProfessor=await Professor.updateOne({_id: userId}, {$push: {publications: newPublication}});
 
-    res.status(200).json({success: 'Publication added successfully', publications: professor.publications});
+    res.status(200).json({success: 'Publication added successfully', publications: updatedProfessor.publications});
   }
   catch(err){
     console.log(err);
@@ -183,17 +183,9 @@ router.put('/publication/update/:id', protectRoute(['professor']), async(req, re
       return res.status(404).json({error: 'User not found'}); 
     }
 
-    const publication=professor.publications.id(id);
+    const updatedProfessor=await Professor.updateOne({_id: userId, 'publications._id': id}, {$set: {'publications.$': updates}});
 
-    if(!publication){
-      return res.status(404).json({error: 'Publication not found'});  
-    }
-
-    publication.set(updates);
-
-    await professor.save();
-
-    res.status(200).json({success: 'Publication updated successfully', publication});
+    res.status(200).json({success: 'Publication updated successfully'});
   }
   catch(err){
     console.log(err);
@@ -213,18 +205,10 @@ router.delete('/publication/delete/:id', protectRoute(['professor']), async(req,
     if(!professor){
       return res.status(404).json({error: 'User not found'});
     }
+    
+    const updatedProfessor=await Professor.updateOne({_id: userId}, {$pull: {publications: {_id: id}}});
 
-    const publication=professor.publications.id(id);
-
-    if(!publication){
-      return res.status(404).json({error: 'Publication not found'});
-    }
-
-    publication.remove();
-
-    await professor.save();
-
-    res.status(200).json({success: 'Publication deleted successfully', publications: professor.publications});
+    res.status(200).json({success: 'Publication deleted successfully'});
   }
   catch(err){
     console.log(err);
